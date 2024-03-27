@@ -34,7 +34,7 @@ params:
   - name: host
     type: string
 modules:
-  - name: qmonus.net/adapter/official
+  - name: github.com/qmonus/official-cloud-native-adapters-internal
     revision: v0.23.0
 designPatterns:
   - pattern: qmonus.net/adapter/official/adapters/azure/container/kubernetes/apiBackend
