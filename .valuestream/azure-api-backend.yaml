@@ -99,4 +99,3 @@ designPatterns:
             selector: .type == "azure-native:keyvault:Secret" and (.urn | (type == "string" and endswith("azure-native:keyvault:Secret::redisPrimaryKeySecret")))
             path: .outputs.name
           name: RedisPasswordSecretName
-  - pattern: qmonus.net/adapter/official/pipeline/scan:trivyAzure
