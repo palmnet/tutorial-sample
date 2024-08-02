@@ -1,0 +1,28 @@
+params:
+  - name: appName
+    type: string
+  - name: awsCredentialName
+    type: string
+  - name: awsRegion
+    type: string
+  - name: conteinerRegistry
+    type: string
+  - name: imageRegistryPath
+    type: string
+  - name: imageShortName
+    type: string
+  - name: imageTag
+    type: string
+modules:
+  - name: qmonus.net/adapter/official
+    revision: v0.33.0
+designPatterns:
+  - pattern: qmonus.net/adapter/official/pipeline/build:buildkitAws
+    params:
+      awsCredentialName: ${params.awsCredentialName}
+      awsReigion: ${params.awsRegion}
+      containerRegistry: ${params.containerRegistry}
+      imageRegistryPath: ${params.imageRegistryPath}
+      imageShortName: ${params.imageShortName}
+      imageTag: ${params.imageTag}
+
