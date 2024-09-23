@@ -1,0 +1,276 @@
+params:
+  - name: k8sNamespace
+    type: string
+  - name: version
+    type: string
+  - name: currentVersion
+    type: string
+  - name: axisImage
+    type: string
+  - name: frontalImage
+    type: string
+  - name: qmonusSdkRegionName
+    type: string
+  - name: redisDbShared
+    type: int
+  - name: redisDbTransaction
+    type: int
+  - name: globalIpApiActive
+    type: string
+  - name: globalIpApiStandby
+    type: string
+  - name: globalIpFrontalActive
+    type: string
+  - name: globalIpFrontalStandby
+    type: string
+  - name: securityPolicyApi
+    type: string
+  - name: securityPolicyFrontal
+    type: string
+  - name: endpointApiActive
+    type: string
+  - name: endpointApiStandby
+    type: string
+  - name: endpointApiInternalPublic
+    type: string
+  - name: endpointApiCommon
+    type: string
+  - name: endpointFrontalActive
+    type: string
+  - name: endpointFrontalStandby
+    type: string
+  - name: mysqlIp
+    type: string
+  - name: redisIp
+    type: string
+  - name: filestoreIp
+    type: string
+  - name: filestorePath
+    type: string
+  - name: gcpProjectId
+    type: string
+  - name: deployTargetEnvType
+    type: string
+  - name: cloudSqlInstanceName
+    type: string
+  - name: cloudBucketNameForSql
+    type: string
+  - name: memorystoreInstanceName
+    type: string
+  - name: cloudBucketNameForRedis
+    type: string
+  - name: sslPolicy
+    type: string
+  - name: axisDbPass
+    type: secret
+  - name: superApiKey
+    type: secret
+  - name: adminPass
+    type: secret
+  - name: temipPass
+    type: secret
+  - name: axisAdminUsername
+    type: secret
+  - name: axisAdminPassword
+    type: secret
+modules:
+  - name: github.com/qmonus/qmonus-sdk-cloud-native-adapter
+    revision: put-commitId-or-branch-or-tag
+designPatterns:
+  - pattern: qmonus.net/adapter/qmonus-sdk/kubernetes:namespace
+    params:
+      name: $(params.k8sNamespace)
+  - pattern: qmonus.net/adapter/qmonus-sdk/usecase/sdp:replicaSetFollowerController
+    params:
+      k8sNamespace: $(params.k8sNamespace)
+  - pattern: qmonus.net/adapter/qmonus-sdk/component/middleware:mysql
+    params:
+      ip: $(params.mysqlIp)
+      k8sNamespace: $(params.k8sNamespace)
+  - pattern: qmonus.net/adapter/qmonus-sdk/usecase/sdp:apigw
+    params:
+      dbUser: axis
+      globalIpStandby: $(params.globalIpApiStandby)
+      qmonusSdkRegionName: $(params.qmonusSdkRegionName)
+      adminEndpoint: $(params.endpointApiActive)
+      internalPublicEndpoint: $(params.endpointApiInternalPublic)
+      secret:
+        rid: axis-apigw-secrets
+        data:
+          QMONUS_SDK_SUPER_API_KEY: $(params.superApiKey)
+          DB_PASS: $(params.axisDbPass)
+      currentVersion: $(params.currentVersion)
+      k8sNamespace: $(params.k8sNamespace)
+      redisIp: $(params.redisIp)
+      globalIpActive: $(params.globalIpApiActive)
+      securityPolicyActive: $(params.securityPolicyApi)
+      sslPolicy: $(params.sslPolicy)
+      redisDb: $(params.redisDbShared)
+      standbyEndpoint: $(params.endpointApiStandby)
+      allowedApiPaths:
+        - /healthcheck/*
+        - /v1/*
+        - /common/*
+      version: $(params.version)
+      additionalArgs:
+        - --super_api_key=$(QMONUS_SDK_SUPER_API_KEY)
+        - --atom_recovery_policy=transaction
+      image: $(params.axisImage)
+      scaleDownDelaySeconds: 10
+      routingRules:
+        - path: /a/*
+          serviceName: testService1
+          servicePort: 1234
+        - pathType: Exact
+          path: /b/*
+          serviceName: testService2
+          servicePort: 5678
+      preAnalysisTemplateNames:
+        - test-preAnalysisTemplateNames-1
+      gcpProjectId: $(params.gcpProjectId)
+      progressDeadlineSeconds: 600
+      postAnalysisTemplateNames:
+        - transaction-check
+      securityPolicyStandby: $(params.securityPolicyApi)
+      commonEndpoint: $(params.endpointApiCommon)
+      maxUnavailable: 2
+  - pattern: qmonus.net/adapter/qmonus-sdk/usecase/sdp:scenario
+    params:
+      dbUser: axis
+      qmonusSdkRegionName: $(params.qmonusSdkRegionName)
+      pluginRepoName: test-pj_plugins
+      secret:
+        rid: axis-scenario-secrets
+        data:
+          QMONUS_SDK_SUPER_API_KEY: $(params.superApiKey)
+          DB_PASS: $(params.axisDbPass)
+          TEMIP_PASS: $(params.temipPass)
+          ADMIN_PASS: $(params.adminPass)
+      currentVersion: $(params.currentVersion)
+      k8sNamespace: $(params.k8sNamespace)
+      redisIp: $(params.redisIp)
+      hasConfigRepo: true
+      redisDb: $(params.redisDbShared)
+      version: $(params.version)
+      image: $(params.axisImage)
+      additionalArgs:
+        - --super_api_key=$(QMONUS_SDK_SUPER_API_KEY)
+        - --atom_recovery_policy=transaction
+        - --ignore_plugins=testsuites,testcases,fakers,illusions
+      plugins:
+        - healthcheck
+        - dummy
+        - $(params.deployTargetEnvType)
+      progressDeadlineSeconds: 600
+      gcpProjectId: $(params.gcpProjectId)
+      maxUnavailable: 2
+      configRepoName: test-pj_configs
+  - pattern: qmonus.net/adapter/qmonus-sdk/usecase/sdp:transaction
+    params:
+      version: $(params.version)
+      dbUser: axis
+      image: $(params.axisImage)
+      qmonusSdkRegionName: $(params.qmonusSdkRegionName)
+      additionalArgs:
+        - --super_api_key=$(QMONUS_SDK_SUPER_API_KEY)
+        - --atom_recovery_policy=transaction
+      progressDeadlineSeconds: 600
+      secret:
+        rid: axis-transaction-secrets
+        data:
+          QMONUS_SDK_SUPER_API_KEY: $(params.superApiKey)
+          DB_PASS: $(params.axisDbPass)
+      gcpProjectId: $(params.gcpProjectId)
+      k8sNamespace: $(params.k8sNamespace)
+      redisIp: $(params.redisIp)
+      currentVersion: $(params.currentVersion)
+      maxUnavailable: 2
+      redisDb: $(params.redisDbTransaction)
+  - pattern: qmonus.net/adapter/qmonus-sdk/usecase/sdp:schedule
+    params:
+      dbUser: axis
+      qmonusSdkRegionName: $(params.qmonusSdkRegionName)
+      secret:
+        rid: axis-schedule-secrets
+        data:
+          QMONUS_SDK_SUPER_API_KEY: $(params.superApiKey)
+          DB_PASS: $(params.axisDbPass)
+      currentVersion: $(params.currentVersion)
+      k8sNamespace: $(params.k8sNamespace)
+      redisIp: $(params.redisIp)
+      frontalEndpoint: $(params.endpointFrontalActive)
+      redisDb: $(params.redisDbShared)
+      version: $(params.version)
+      image: $(params.axisImage)
+      additionalArgs:
+        - --super_api_key=$(QMONUS_SDK_SUPER_API_KEY)
+        - --atom_recovery_policy=transaction
+      plugins:
+        - healthcheck
+        - dummy
+        - $(params.deployTargetEnvType)
+      progressDeadlineSeconds: 600
+      gcpProjectId: $(params.gcpProjectId)
+      maxUnavailable: 2
+  - pattern: qmonus.net/adapter/qmonus-sdk/usecase/sdp:frontal
+    params:
+      dbUser: axis
+      globalIpStandby: $(params.globalIpFrontalStandby)
+      qmonusSdkRegionName: $(params.qmonusSdkRegionName)
+      adminEndpoint: $(params.endpointFrontalActive)
+      secret:
+        rid: axis-frontal-secrets
+        data:
+          QMONUS_SDK_SUPER_API_KEY: $(params.superApiKey)
+          DB_PASS: $(params.axisDbPass)
+      currentVersion: $(params.currentVersion)
+      k8sNamespace: $(params.k8sNamespace)
+      redisIp: $(params.redisIp)
+      globalIpActive: $(params.globalIpFrontalActive)
+      securityPolicyActive: $(params.securityPolicyFrontal)
+      sslPolicy: $(params.sslPolicy)
+      redisDb: $(params.redisDbShared)
+      version: $(params.version)
+      image: $(params.frontalImage)
+      additionalArgs:
+        - --super_api_key=$(QMONUS_SDK_SUPER_API_KEY)
+        - --atom_recovery_policy=transaction
+      progressDeadlineSeconds: 600
+      gcpProjectId: $(params.gcpProjectId)
+      securityPolicyStandby: $(params.securityPolicyFrontal)
+      commonEndpoint: $(params.endpointFrontalStandby)
+      maxUnavailable: 2
+  - pattern: qmonus.net/adapter/qmonus-sdk/component/callback:cloudSQL
+    params:
+      k8sNamespace: $(params.k8sNamespace)
+      cloudBucketNameForSql: $(params.cloudBucketNameForSql)
+      cloudSqlInstanceName: $(params.cloudSqlInstanceName)
+  - pattern: qmonus.net/adapter/qmonus-sdk/component/callback:memorystore
+    params:
+      k8sNamespace: $(params.k8sNamespace)
+      cloudBucketNameForRedis: $(params.cloudBucketNameForRedis)
+      memorystoreInstanceName: $(params.memorystoreInstanceName)
+  - pattern: qmonus.net/adapter/qmonus-sdk/usecase/axisAdmin
+    params:
+      adminEndpoint: $(params.endpointApiActive)
+      qmonusSdkRegionName: $(params.qmonusSdkRegionName)
+      secret:
+        rid: axis-admin-secrets
+        data:
+          QMONUS_SDK_SUPER_API_KEY: $(params.superApiKey)
+          DB_PASS: $(params.axisDbPass)
+          AXIS_ADMIN_USERNAME: $(params.axisAdminUsername)
+          AXIS_ADMIN_PASSWORD: $(params.axisAdminPassword)
+      currentVersion: $(params.currentVersion)
+      k8sNamespace: $(params.k8sNamespace)
+      redisIp: $(params.redisIp)
+      redisDb: $(params.redisDbShared)
+      version: $(params.version)
+      image: $(params.axisImage)
+      additionalArgs:
+        - --super_api_key=$(QMONUS_SDK_SUPER_API_KEY)
+        - --atom_recovery_policy=transaction
+      progressDeadlineSeconds: 600
+      gcpProjectId: $(params.gcpProjectId)
+      axisAdminPassword: $(params.axisAdminPassword)
+      axisAdminUsername: $(params.axisAdminUsername)
