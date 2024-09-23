@@ -75,7 +75,7 @@ params:
     type: secret
 modules:
   - name: github.com/qmonus/qmonus-sdk-cloud-native-adapter
-    revision: put-commitId-or-branch-or-tag
+    revision: main
 designPatterns:
   - pattern: qmonus.net/adapter/qmonus-sdk/kubernetes:namespace
     params:
